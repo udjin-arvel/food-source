@@ -4,11 +4,17 @@ B2B-помощник закупщика продуктов: фильтры, пр
 
 ![Демо интерфейса](demo.gif)
 
-## Быстрый старт
+## Быстрый локальный старт
 
 ```bash
 docker compose up --build
+# или
+make up
 ```
+
+Список команд: `make help` (Docker, локальный dev, тесты).
+
+Документация для ревью: [`.project/DECISION.md`](.project/DECISION.md) (решения), [`.project/DEPLOY.md`](.project/DEPLOY.md) (prod), [`.project/smoke-test.md`](.project/smoke-test.md) (быстрая проверка).
 
 | Сервис | URL |
 |--------|-----|

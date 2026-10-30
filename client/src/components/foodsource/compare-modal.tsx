@@ -94,8 +94,8 @@ export function CompareModal({ open, ids, brief, onClose, onRemove }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto p-0 scrollbar-thin">
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b p-6 pr-16 sm:p-7 sm:pr-16">
+      <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
+        <div className="flex shrink-0 flex-wrap items-end justify-between gap-4 border-b p-6 pr-16 sm:p-7 sm:pr-16">
           <div>
             <DialogTitle className="font-display text-2xl font-extrabold sm:text-3xl">
               Сравнение поставщиков
@@ -109,15 +109,16 @@ export function CompareModal({ open, ids, brief, onClose, onRemove }: Props) {
           </Button>
         </div>
 
-        {isLoading || !data ? (
-          <div className="grid gap-3 p-7 sm:grid-cols-3">
-            {ids.map((id) => (
-              <Skeleton key={id} className="h-80" />
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-x-auto p-4 sm:p-6 scrollbar-thin">
-            <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-x-2 border-spacing-y-0 text-sm">
+        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+          {isLoading || !data ? (
+            <div className="grid gap-3 p-7 sm:grid-cols-3">
+              {ids.map((id) => (
+                <Skeleton key={id} className="h-80" />
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto p-4 sm:p-6 scrollbar-thin">
+              <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-x-2 border-spacing-y-0 text-sm">
               <thead>
                 <tr>
                   <th className="w-36" />
@@ -183,9 +184,10 @@ export function CompareModal({ open, ids, brief, onClose, onRemove }: Props) {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        )}
+              </table>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
