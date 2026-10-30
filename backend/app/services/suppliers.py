@@ -5,9 +5,11 @@ from sqlmodel import Session, select
 from app.models import Category, MoqUnit, Supplier
 from app.schemas import (
     CATEGORY_LABELS,
+    CompareResponse,
     ListResponse,
     MetaResponse,
     QueryBrief,
+    RecommendResponse,
     SupplierFilters,
     SupplierWithScore,
 )
@@ -148,6 +150,89 @@ def get_supplier(session: Session, supplier_id: int, brief: QueryBrief | None) -
     if s is None:
         raise LookupError("Поставщик не найден")
     return with_score(s, brief or QueryBrief())
+
+
+def compare_suppliers(
+    session: Session, ids: list[int], brief: QueryBrief | None
+) -> CompareResponse:
+    from app.schemas import CompareBest, CompareResponse
+
+    if len(ids) < 2 or len(ids) > 3:
+        raise ValueError("Для сравнения выберите 2–3 поставщика")
+
+    items = [get_supplier(session, i, brief) for i in ids]
+
+    def min_of(vals: list[float | None]) -> float | None:
+        nums = [v for v in vals if v is not None]
+        return min(nums) if nums else None
+
+    def same_unit(key: str) -> bool:
+        with_value = [i for i in items if getattr(i, key) is not None]
+        if not with_value:
+            return False
+        units = {i.min_order_unit for i in with_value}
+        return len(units) == 1 and None not in units
+
+    min_moq = (
+        min_of([i.min_order_value for i in items])
+        if same_unit("min_order_value")
+        else None
+    )
+    min_price = (
+        min_of([i.price_per_unit for i in items]) if same_unit("price_per_unit") else None
+    )
+    max_score = max(i.score for i in items)
+
+    return CompareResponse(
+        items=items,
+        best=CompareBest(
+            min_order=[i.id for i in items if min_moq is not None and i.min_order_value == min_moq],
+            price_per_unit=[
+                i.id for i in items if min_price is not None and i.price_per_unit == min_price
+            ],
+            certificates=[i.id for i in items if i.has_certificates],
+            score=[i.id for i in items if i.score == max_score],
+        ),
+    )
+
+
+def recommend_suppliers(
+    session: Session, brief: QueryBrief, limit: int = 3
+) -> RecommendResponse:
+    from app.schemas import RecommendResponse
+
+    db = session.exec(select(Supplier)).all()
+    ranked = sorted(
+        (with_score(s, brief) for s in db),
+        key=lambda x: (-x.score, x.name),
+    )[:limit]
+    if ranked:
+        ranked[0].rank_badge = "best"
+
+    parts: list[str] = []
+    if brief.category:
+        parts.append(f"категория «{CATEGORY_LABELS[brief.category]}»")
+    if brief.region:
+        parts.append(brief.region)
+    if brief.max_min_order is not None:
+        unit = brief.max_min_order_unit.value if brief.max_min_order_unit else ""
+        parts.append(f"MOQ ≤ {brief.max_min_order} {unit}".strip())
+    if brief.need_certificates:
+        parts.append("нужны сертификаты")
+    if brief.budget_per_unit is not None:
+        parts.append(f"бюджет ≤ {brief.budget_per_unit} ₽/ед.")
+
+    top = ranked[0] if ranked else None
+    if top:
+        reasons = ", ".join(top.score_reasons[:3]).lower() or "лучшее совпадение"
+        explanation = (
+            f"По запросу ({', '.join(parts) or 'без ограничений'}) "
+            f"выше всех «{top.name}» — {top.score} из 100: {reasons}."
+        )
+    else:
+        explanation = "Подходящих поставщиков не найдено."
+
+    return RecommendResponse(items=ranked, explanation=explanation, weights=DEFAULT_WEIGHTS)
 
 
 def build_meta(session: Session) -> MetaResponse:

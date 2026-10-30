@@ -99,3 +99,26 @@ class MetaResponse(BaseModel):
     regions: list[str]
     cities: list[dict[str, str]]
     units: list[MoqUnit]
+
+
+class CompareBest(BaseModel):
+    min_order: list[int]
+    price_per_unit: list[int]
+    certificates: list[int]
+    score: list[int]
+
+
+class CompareResponse(BaseModel):
+    items: list[SupplierWithScore]
+    best: CompareBest
+
+
+class CompareRequest(BaseModel):
+    ids: list[int]
+    brief: Optional[QueryBrief] = None
+
+
+class RecommendResponse(BaseModel):
+    items: list[SupplierWithScore]
+    explanation: str
+    weights: ScoringWeights

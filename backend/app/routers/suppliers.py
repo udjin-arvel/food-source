@@ -7,9 +7,23 @@ from sqlmodel import Session
 
 from app.database import get_session
 from app.models import Category, MoqUnit
-from app.schemas import ListResponse, MetaResponse, QueryBrief, SupplierWithScore
+from app.schemas import (
+    CompareRequest,
+    CompareResponse,
+    ListResponse,
+    MetaResponse,
+    QueryBrief,
+    RecommendResponse,
+    SupplierWithScore,
+)
 from app.services.list_params import ListParams
-from app.services.suppliers import build_meta, get_supplier, list_suppliers
+from app.services.suppliers import (
+    build_meta,
+    compare_suppliers,
+    get_supplier,
+    list_suppliers,
+    recommend_suppliers,
+)
 
 router = APIRouter()
 
@@ -118,3 +132,24 @@ def supplier_detail(
 @router.get("/meta", response_model=MetaResponse)
 def meta(session: Annotated[Session, Depends(get_session)]) -> MetaResponse:
     return build_meta(session)
+
+
+@router.post("/compare", response_model=CompareResponse)
+def compare(
+    body: CompareRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> CompareResponse:
+    try:
+        return compare_suppliers(session, body.ids, body.brief)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.post("/recommend", response_model=RecommendResponse)
+def recommend(
+    brief: QueryBrief,
+    session: Annotated[Session, Depends(get_session)],
+) -> RecommendResponse:
+    return recommend_suppliers(session, brief)
